@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { consumeToken } from "@/lib/emailtokens";
+import { clientIp } from "@/lib/clientip";
 import { sameOrigin } from "@/lib/http";
 import { hashPassword } from "@/lib/password";
 import { passwordProblem } from "@/lib/passwordrules";
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
   if (!p.success) return NextResponse.json({ error: INVALID }, { status: 400 });
   const bad = passwordProblem(p.data.password);
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
-  const key = `reset|${req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local"}`;
+  const key = `reset|${clientIp(req)}`;
   if (tooMany(key, 10)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   recordFailure(key);
   try {

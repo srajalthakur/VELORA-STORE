@@ -6,6 +6,7 @@ const DAYS = 7;
 export type SessionUser = { id: string; email: string; name: string | null; role: "CUSTOMER" | "ADMIN" };
 export async function startSession(userId: string) {
   const token = newToken(), expires = new Date(Date.now() + DAYS * 86_400_000);
+  await prisma.session.deleteMany({ where: { userId, expires: { lt: new Date() } } }); // tidy this user's expired sessions
   await prisma.session.create({ data: { sessionToken: hashToken(token), userId, expires } });
   (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", expires });
 }

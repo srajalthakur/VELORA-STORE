@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { dbCode } from "@/lib/dberror";
 import { issueToken } from "@/lib/emailtokens";
+import { clientIp } from "@/lib/clientip";
 import { sameOrigin } from "@/lib/http";
 import { appUrl, sendMail } from "@/lib/mail";
 import { hashPassword } from "@/lib/password";
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   const bad = passwordProblem(p.data.password);
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
 
-  const key = `register|${req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local"}`;
+  const key = `register|${clientIp(req)}`;
   if (tooMany(key, 10)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   recordFailure(key); // counts every attempt, successful or not
 

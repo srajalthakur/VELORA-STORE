@@ -5,7 +5,9 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { expireStaleOrders, releaseOrder, reserve, StockError } from "@/lib/orders";
 import { priceCart, PricingError } from "@/lib/pricing";
+import { clientIp } from "@/lib/clientip";
 import { createRazorpayOrder } from "@/lib/razorpay";
+import { recordFailure, tooMany } from "@/lib/ratelimit";
 import { currentUser } from "@/lib/session";
 import { Details, savedToDetails } from "@/lib/shipto";
 export const runtime = "nodejs";
@@ -51,6 +53,12 @@ export async function POST(req: Request) {
     const include = { payments: true } as const;
     let order = await prisma.order.findUnique({ where: { idempotencyKey: key }, include });
     if (!order) {
+      // A new order holds stock until it is paid or expires, so starting them is limited per visitor and per email.
+      const ipKey = `checkout|${clientIp(req)}`;
+      if (tooMany(ipKey, 10)) return NextResponse.json({ error: "Too many checkouts started. Please wait a few minutes and try again." }, { status: 429 });
+      const open = await prisma.order.count({ where: { email: { equals: b.email, mode: "insensitive" }, status: "PENDING" } });
+      if (open >= 5) return NextResponse.json({ error: "You have several unfinished checkouts. Please complete one, or try again shortly." }, { status: 429 });
+      recordFailure(ipKey);
       await expireStaleOrders(prisma).catch(() => {});
       const variants = await prisma.productVariant.findMany({ where: { id: { in: b.lines.map((l) => l.variantId) } }, include: { inventory: true, product: { select: { name: true, active: true } } } });
       const coupon = b.coupon ? await prisma.coupon.findUnique({ where: { code: b.coupon.toUpperCase() } }) : null;

@@ -5,7 +5,6 @@ import { AmountMismatchError, markRefunded, settle, UnknownOrderError } from "@/
 import { verifyWebhookSignature } from "@/lib/razorpay";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const isUnique = (e: unknown) => typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
 
 export async function POST(req: Request) {
   const raw = await req.text(); // the exact bytes Razorpay signed
@@ -16,25 +15,27 @@ export async function POST(req: Request) {
   let ev: any;
   try { ev = JSON.parse(raw); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
   try {
-    await prisma.$transaction(async (tx) => {
-      await tx.webhookEvent.create({ data: { id: eventId, type: String(ev.event) } }); // unique id: replays are rejected
+    const duplicate = await prisma.$transaction(async (tx) => {
+      // Recording the event id and handling the event are one transaction. A repeat delivery inserts nothing (count 0) and is skipped,
+      // and any other database error is a real failure, not a "duplicate".
+      const seen = await tx.webhookEvent.createMany({ data: [{ id: eventId, type: String(ev.event) }], skipDuplicates: true });
+      if (seen.count === 0) return true;
       const pay = ev.payload?.payment?.entity;
       try {
         if ((ev.event === "payment.captured" || ev.event === "order.paid") && pay?.order_id && pay?.id) {
           const r = await settle(tx, pay.order_id, pay.id, pay.amount);
           if (r.needsRefund) console.error("REFUND REQUIRED: payment received for an expired order", r.number, pay.id);
-        }
-        else if (ev.event === "refund.processed" && ev.payload?.refund?.entity?.payment_id) await markRefunded(tx, ev.payload.refund.entity.payment_id);
+        } else if (ev.event === "refund.processed" && ev.payload?.refund?.entity?.payment_id) await markRefunded(tx, ev.payload.refund.entity.payment_id);
         // payment.failed is intentionally ignored: Razorpay lets the customer retry on the same order.
       } catch (e) {
         if (e instanceof UnknownOrderError || e instanceof AmountMismatchError) console.error("webhook ignored:", e.message);
         else throw e;
       }
+      return false;
     });
+    return NextResponse.json(duplicate ? { ok: true, duplicate: true } : { ok: true });
   } catch (e) {
-    if (isUnique(e)) return NextResponse.json({ ok: true, duplicate: true });
     console.error("webhook failed:", e instanceof Error ? e.message : "unknown error");
     return NextResponse.json({ error: "Processing failed" }, { status: 500 }); // Razorpay will retry
   }
-  return NextResponse.json({ ok: true });
 }

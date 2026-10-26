@@ -5,7 +5,7 @@ export class StockError extends Error {}
 export class UnknownOrderError extends Error {}
 export class AmountMismatchError extends Error {}
 /** How long an unpaid checkout may hold stock. */
-export const HOLD_MINUTES = 30;
+export const HOLD_MINUTES = 15;
 
 async function tryReserve(tx: Tx, lines: Line[]) {
   const done: Line[] = [];

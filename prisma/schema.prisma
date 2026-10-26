@@ -250,3 +250,17 @@ model NewsletterSubscriber {
   email String @unique
   createdAt DateTime @default(now())
 }
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  actorId    String
+  actorEmail String
+  action     String
+  targetType String
+  targetId   String
+  detail     Json?
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { issueToken } from "@/lib/emailtokens";
+import { clientIp } from "@/lib/clientip";
 import { sameOrigin } from "@/lib/http";
 import { appUrl, sendMail } from "@/lib/mail";
 import { recordFailure, tooMany } from "@/lib/ratelimit";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: p.error.issues[0]?.message ?? "Enter a valid email address" }, { status: 400 });
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const ip = clientIp(req);
   const ipKey = `forgot|${ip}`, mailKey = `forgot-mail|${p.data.email}`;
   if (tooMany(ipKey, 8)) return NextResponse.json({ error: "Too many requests. Try again in 15 minutes." }, { status: 429 });
   recordFailure(ipKey);

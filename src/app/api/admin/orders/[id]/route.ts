@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { audit } from "@/lib/audit";
 import { adminOnly, sameOrigin } from "@/lib/http";
 import { canMove } from "@/lib/orderflow";
 export const dynamic = "force-dynamic";
@@ -19,5 +20,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!canMove(o.status, p.data.status)) return NextResponse.json({ error: `An order that is ${o.status.toLowerCase()} cannot be marked ${p.data.status.toLowerCase()}` }, { status: 409 });
   const r = await prisma.order.updateMany({ where: { id, status: o.status }, data: { status: p.data.status as OrderStatus } });
   if (r.count !== 1) return NextResponse.json({ error: "This order was just changed. Refresh and try again." }, { status: 409 });
+  await audit(a.user, "order.status", { type: "Order", id }, { from: o.status, to: p.data.status });
   return NextResponse.json({ ok: true, status: p.data.status });
 }

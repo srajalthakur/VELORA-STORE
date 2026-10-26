@@ -172,6 +172,7 @@ section{padding:84px 6vw}.hd{grid-template-columns:1fr;gap:18px;margin-bottom:36
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const RM=matchMedia("(prefers-reduced-motion:reduce)").matches;
 const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+const plain=h=>{const t=document.createElement("textarea");t.innerHTML=h;return t.value};
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 let P=[];
 const loadP=async()=>{try{const r=await fetch("/api/products");if(!r.ok)throw 0;const d=await r.json();return d.filter(p=>p.variants&&p.variants.length).map((p,i)=>{const base=Math.min(...p.variants.map(v=>v.pricePaise));return{id:i+1,slug:p.slug,n:esc(p.name),c:esc(p.category),p:base/100,b:esc(p.badge||""),m:esc((p.name||"V")[0]),d:esc(p.description),s:(p.specs||[]).map(esc).join("|"),img:(p.images||[]).map(x=>({url:esc(x.url),alt:esc(x.alt)})),v:p.variants.map(v=>[esc(v.name),(v.pricePaise-base)/100,v.available,v.id])}})}catch(e){return[]}};
@@ -251,7 +252,7 @@ function closeP(){$("#pdp").hidden=true;lock();const l=last;last=null;l&&l.focus
 /* events */
 document.addEventListener("click",e=>{const t=e.target.closest("button,a,[data-cat]");if(!t)return;const d=t.dataset;
 if(d.o){if($("#dr").classList.contains("o")){$("#dr").classList.remove("o");$("#ov").classList.remove("o")}openP(+d.o)}
-else if(d.a){const p=getP(+d.a),vi=p.v.findIndex(v=>v[2]>0);if(vi<0)return toast("Sold out");if(add(p.id,vi))toast(`Added ${p.n}, ${p.v[vi][0]}`)}
+else if(d.a){const p=getP(+d.a),vi=p.v.findIndex(v=>v[2]>0);if(vi<0)return toast("Sold out");if(add(p.id,vi))toast(`Added ${plain(p.n)}, ${plain(p.v[vi][0])}`)}
 else if(d.w){const k=+d.w;wish.has(k)?wish.delete(k):wish.add(k);save();toast(wish.has(k)?"Saved to your wishlist":"Removed from your wishlist");grid();if(!$("#pdp").hidden)pd()}
 else if(d.u||d.d||d.r){const k=d.u||d.d||d.r,i=cart.find(x=>K(x)==k);if(d.u){if(i.q<getP(i.id).v[i.v][2])i.q++;else toast("That is all we have in this finish")}else if(d.d)i.q--;else i.q=0;cart=cart.filter(x=>x.q>0);render()}
 else if(d.sa){if(d.sa=="new"){["name","phone","addr","city","state","pin"].forEach(k=>F[k]="");F.aid=undefined}else{const a=SA.find(x=>x.id==d.sa);if(a)applySA(a)}kr()}
