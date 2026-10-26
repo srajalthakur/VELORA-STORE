@@ -16,4 +16,5 @@ const security = [
   { key: "Content-Security-Policy-Report-Only", value: csp },
   ...(prod ? [{ key: "Strict-Transport-Security", value: "max-age=15552000" }] : []),
 ];
-export default { poweredByHeader: false, async headers() { return [{ source: "/:path*", headers: security }]; } };
+// The storefront page is read from disk at request time, so tell the build to ship that file with the "/" route.
+export default { poweredByHeader: false, outputFileTracingIncludes: { "/": ["./src/storefront/velora.html"] }, async headers() { return [{ source: "/:path*", headers: security }]; } };

@@ -12,6 +12,14 @@ const items: Item[] = [
   { name: "Monarch Cufflinks", cat: "Jewellery", col: "Sovereign Edit", badge: "New", desc: "Weighted rhodium and gold cufflinks with a swivel back that sits flat against the cuff.", specs: ["Gold-plated brass, rhodium accents", "Swivel-back fastening", "Enamel set by hand", "Gift box included"], v: [["Gold", 2750000, 6], ["Emerald enamel", 3100000, 3]] },
 ];
 async function main() {
+  // SEED_ADMIN_ONLY=1 creates just the admin account, with none of the demo products or the demo coupon. Use it on the live database.
+  if (process.env.SEED_ADMIN_ONLY === "1") {
+    const email = process.env.ADMIN_EMAIL, pw = process.env.ADMIN_PASSWORD;
+    if (!email || !pw) throw new Error("Set ADMIN_EMAIL and ADMIN_PASSWORD");
+    await db.user.upsert({ where: { email }, update: { role: "ADMIN" }, create: { email, name: "Admin", role: "ADMIN", passwordHash: hashPassword(pw), emailVerified: new Date() } });
+    console.log("Admin account ready. No demo products were added.");
+    return;
+  }
   for (const name of [...new Set(items.map((i) => i.cat))]) await db.category.upsert({ where: { slug: slug(name) }, update: {}, create: { slug: slug(name), name } });
   for (const name of [...new Set(items.map((i) => i.col))]) await db.collection.upsert({ where: { slug: slug(name) }, update: {}, create: { slug: slug(name), name } });
   for (const it of items) {

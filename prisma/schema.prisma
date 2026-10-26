@@ -199,6 +199,13 @@ model Order {
   totalPaise Int
   couponCode String?
   createdAt DateTime @default(now())
+  confirmedAt DateTime?
+  processingAt DateTime?
+  shippedAt DateTime?
+  deliveredAt DateTime?
+  carrier String?
+  trackingNumber String?
+  trackingUrl String?
   user User? @relation(fields: [userId], references: [id])
   items OrderItem[]
   payments Payment[]

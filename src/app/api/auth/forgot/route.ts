@@ -18,11 +18,11 @@ export async function POST(req: Request) {
   if (!p.success) return NextResponse.json({ error: p.error.issues[0]?.message ?? "Enter a valid email address" }, { status: 400 });
   const ip = clientIp(req);
   const ipKey = `forgot|${ip}`, mailKey = `forgot-mail|${p.data.email}`;
-  if (tooMany(ipKey, 8)) return NextResponse.json({ error: "Too many requests. Try again in 15 minutes." }, { status: 429 });
-  recordFailure(ipKey);
+  if (await tooMany(ipKey, 8)) return NextResponse.json({ error: "Too many requests. Try again in 15 minutes." }, { status: 429 });
+  await recordFailure(ipKey);
   const ok = NextResponse.json({ ok: true });
-  if (tooMany(mailKey, 3)) return ok; // stops one mailbox from being flooded; the caller still sees the usual answer
-  recordFailure(mailKey);
+  if (await tooMany(mailKey, 3)) return ok; // stops one mailbox from being flooded; the caller still sees the usual answer
+  await recordFailure(mailKey);
   try {
     const user = await prisma.user.findFirst({ where: { email: { equals: p.data.email, mode: "insensitive" }, passwordHash: { not: null } }, select: { email: true } });
     if (user) {

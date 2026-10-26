@@ -121,7 +121,7 @@ section{padding:84px 6vw}.hd{grid-template-columns:1fr;gap:18px;margin-bottom:36
 </style></head><body>
 <div class="cur" aria-hidden="true"></div>
 <nav id="nv"><a class="logo" href="#top" aria-label="Velora home">VELORA</a>
-<div class="links" id="lk"><a href="#collections">Collections</a><a href="#shop">Best Sellers</a><a href="#story">Our Story</a><a href="#journal">Reviews</a><a href="/login" id="acct">Sign in</a></div>
+<div class="links" id="lk"><a href="#collections">Collections</a><a href="#shop">Best Sellers</a><a href="#story">Our Story</a><a href="#journal">Reviews</a><a href="/track">Track order</a><a href="/login" id="acct">Sign in</a></div>
 <div class="ic"><button id="menu" aria-label="Menu" aria-expanded="false">Menu</button><button id="bag" aria-label="Open bag">Bag<span id="cc">0</span></button></div></nav>
 
 <header class="hero" id="top"><canvas id="gl" aria-hidden="true"></canvas><div class="fb" id="fb">V</div><div class="vg"></div><div class="grain"></div>
@@ -190,7 +190,10 @@ let ME=null,SA=[];const addrLine=a=>[a.line1,a.line2,a.city,a.state,a.pin].filte
 const loadSA=async()=>{try{const r=await fetch("/api/account/addresses",{cache:"no-store"});SA=r.ok?((await r.json()).addresses||[]):[]}catch(e){SA=[]}};
 const applySA=a=>{F.name=a.fullName;F.phone=a.phone;F.addr=[a.line1,a.line2].filter(Boolean).join(", ");F.city=a.city;F.state=a.state;F.pin=a.pin;F.aid=a.id;if(ME&&!F.email)F.email=ME.email};
 const savedBox=()=>SA.length?`<div class="sa"><label>Saved addresses</label>${SA.map(a=>`<button type="button" class="opt${F.aid==a.id?" on":""}" data-sa="${esc(a.id)}"><span>${esc(a.fullName)}${a.isDefault?" · Default":""}<small class="vn">${esc(addrLine(a))}</small></span></button>`).join("")}<button type="button" class="chip" data-sa="new">Use a different address</button></div>`:"";
-(async()=>{try{const r=await fetch("/api/auth/me",{cache:"no-store"});if(!r.ok)return;ME=await r.json();const a=$("#acct");a.textContent="Account";a.href="/account";await loadSA()}catch(e){}})();
+/* wishlist: saved in this browser for everyone; also saved to the account when signed in */
+const wapi=(m,b)=>fetch("/api/account/wishlist",{method:m,headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});
+const syncWish=async()=>{try{const r=await fetch("/api/account/wishlist",{cache:"no-store"});if(!r.ok)return;const srv=(await r.json()).slugs||[];const loc=[...wish].map(id=>getP(id)).filter(Boolean).map(p=>p.slug);const extra=loc.filter(sl=>!srv.includes(sl));if(extra.length)await wapi("POST",{slugs:extra});srv.forEach(sl=>{const p=P.find(x=>x.slug===sl);if(p)wish.add(p.id)});save();grid()}catch(e){}};
+(async()=>{try{const r=await fetch("/api/auth/me",{cache:"no-store"});if(!r.ok)return;ME=await r.json();const a=$("#acct");a.textContent="Account";a.href="/account";await loadSA();await syncWish()}catch(e){}})();
 const toast=m=>{const t=$("#ts");t.textContent=m;t.classList.add("o");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("o"),2800)};
 const eta=(a,b)=>{const f=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toLocaleDateString("en-IN",{day:"numeric",month:"short"})};return f(a)+" to "+f(b)};
 const lock=()=>{const o=$("#dr.o")||!$("#pdp").hidden;document.body.style.overflow=o?"hidden":"";$$("body>header,body>section,body>footer,body>nav").forEach(e=>e.inert=!!o)};
@@ -253,7 +256,7 @@ function closeP(){$("#pdp").hidden=true;lock();const l=last;last=null;l&&l.focus
 document.addEventListener("click",e=>{const t=e.target.closest("button,a,[data-cat]");if(!t)return;const d=t.dataset;
 if(d.o){if($("#dr").classList.contains("o")){$("#dr").classList.remove("o");$("#ov").classList.remove("o")}openP(+d.o)}
 else if(d.a){const p=getP(+d.a),vi=p.v.findIndex(v=>v[2]>0);if(vi<0)return toast("Sold out");if(add(p.id,vi))toast(`Added ${plain(p.n)}, ${plain(p.v[vi][0])}`)}
-else if(d.w){const k=+d.w;wish.has(k)?wish.delete(k):wish.add(k);save();toast(wish.has(k)?"Saved to your wishlist":"Removed from your wishlist");grid();if(!$("#pdp").hidden)pd()}
+else if(d.w){const k=+d.w;wish.has(k)?wish.delete(k):wish.add(k);save();if(ME){const sl=getP(k).slug;(wish.has(k)?wapi("POST",{slug:sl}):wapi("DELETE",{slug:sl})).then(r=>{if(!r.ok)toast("Could not sync your wishlist")}).catch(()=>{})}toast(wish.has(k)?"Saved to your wishlist":"Removed from your wishlist");grid();if(!$("#pdp").hidden)pd()}
 else if(d.u||d.d||d.r){const k=d.u||d.d||d.r,i=cart.find(x=>K(x)==k);if(d.u){if(i.q<getP(i.id).v[i.v][2])i.q++;else toast("That is all we have in this finish")}else if(d.d)i.q--;else i.q=0;cart=cart.filter(x=>x.q>0);render()}
 else if(d.sa){if(d.sa=="new"){["name","phone","addr","city","state","pin"].forEach(k=>F[k]="");F.aid=undefined}else{const a=SA.find(x=>x.id==d.sa);if(a)applySA(a)}kr()}
 else if(d.c){cat=d.c;grid()}
@@ -283,6 +286,8 @@ let tick=0;function onS(){tick=0;$("#nv").classList.toggle("s",scrollY>60);const
 const r=$("#story").getBoundingClientRect(),p=RM?1:Math.min(1,Math.max(0,(innerHeight*.85-r.top)/(r.height*.8)));ws.forEach((w,i)=>w.classList.toggle("on",i<p*ws.length))}
 addEventListener("scroll",()=>{if(!tick)tick=requestAnimationFrame(onS)},{passive:true});onS();
 render();
+/* open a product from a link such as /?product=slug (used by the account wishlist) */
+{const q=new URLSearchParams(location.search).get("product");if(q){const p=P.find(x=>x.slug===q);if(p)openP(p.id);history.replaceState(null,"",location.pathname)}}
 /* 3D hero */
 (function(){const cv=$("#gl");let R,raf=0,run=false,vis=true;const fail=()=>{cv.style.display="none";$("#fb").style.display="grid"};
 try{const mob=innerWidth<820;R=new THREE.WebGLRenderer({canvas:cv,antialias:!mob,alpha:true,powerPreference:"high-performance"});

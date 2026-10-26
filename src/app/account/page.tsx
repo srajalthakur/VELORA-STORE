@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { AddressBook, SignOut } from "./AccountClient";
 import { ChangePassword, VerifyBanner } from "./AccountSecurity";
+import { WishlistGrid } from "./WishlistGrid";
+import OrderTimeline from "../track/OrderTimeline";
+import { safeTrackingUrl, timeline } from "@/lib/tracking";
 import s from "./account.module.css";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +19,27 @@ export default async function AccountPage() {
   const user = await currentUser();
   if (!user) redirect("/login?next=/account");
 
-  const [orders, addresses, me] = await Promise.all([
+  const [orders, addresses, me, saved] = await Promise.all([
     // Orders are matched on the account's id only. Matching on email would let anyone who signs up with someone else's email read their orders.
     prisma.order.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 50, include: { items: true } }),
     prisma.address.findMany({ where: { userId: user.id }, orderBy: [{ isDefault: "desc" }, { id: "asc" }] }),
     prisma.user.findUnique({ where: { id: user.id }, select: { emailVerified: true } }),
+    prisma.wishlistItem.findMany({
+      where: { userId: user.id, product: { active: true } },
+      take: 200,
+      include: { product: { include: { images: { orderBy: { position: "asc" }, take: 1 }, variants: { where: { active: true }, include: { inventory: true } } } } },
+    }),
   ]);
+  const wishItems = saved
+    .map((w) => w.product)
+    .filter((p) => p.variants.length > 0)
+    .map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      image: p.images[0] ? { url: p.images[0].url, alt: p.images[0].alt } : null,
+      fromPaise: Math.min(...p.variants.map((v) => v.pricePaise)),
+      inStock: p.variants.some((v) => (v.inventory?.onHand ?? 0) - (v.inventory?.reserved ?? 0) > 0),
+    }));
 
   return (
     <main className={s.page}>
@@ -57,10 +75,21 @@ export default async function AccountPage() {
                   ))}
                 </ul>
                 <p className={s.total}>{rupees(o.totalPaise)}</p>
+                {o.status !== "PENDING" && (
+                  <details className={s.track}>
+                    <summary>Track this order</summary>
+                    <OrderTimeline t={{ timeline: timeline(o), carrier: o.carrier, trackingNumber: o.trackingNumber, trackingUrl: safeTrackingUrl(o.trackingUrl) }} />
+                  </details>
+                )}
               </li>
             ))}
           </ul>
         )}
+      </section>
+
+      <section aria-labelledby="wish-h">
+        <h2 id="wish-h" className={s.h2}>Wishlist</h2>
+        <WishlistGrid items={wishItems} />
       </section>
 
       <section aria-labelledby="addr-h">

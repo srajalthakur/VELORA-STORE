@@ -22,16 +22,16 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: p.error.issues[0]?.message ?? "Check the passwords and try again" }, { status: 400 });
   const key = `pw|${a.user.id}`;
-  if (tooMany(key)) return NextResponse.json({ error: "Too many wrong attempts. Try again in 15 minutes." }, { status: 429 });
+  if (await tooMany(key)) return NextResponse.json({ error: "Too many wrong attempts. Try again in 15 minutes." }, { status: 429 });
   const u = await prisma.user.findUnique({ where: { id: a.user.id }, select: { passwordHash: true } });
   if (!u?.passwordHash || !verifyPassword(p.data.current, u.passwordHash)) {
-    recordFailure(key);
+    await recordFailure(key);
     return NextResponse.json({ error: "Your current password is not correct" }, { status: 403 });
   }
   const bad = passwordProblem(p.data.next);
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
   if (p.data.next === p.data.current) return NextResponse.json({ error: "Choose a password different from the current one" }, { status: 400 });
-  clearFailures(key);
+  await clearFailures(key);
   const mine = (await cookies()).get(SESSION_COOKIE)?.value;
   await prisma.$transaction([
     prisma.user.update({ where: { id: a.user.id }, data: { passwordHash: hashPassword(p.data.next) } }),

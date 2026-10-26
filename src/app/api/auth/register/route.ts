@@ -28,8 +28,8 @@ export async function POST(req: Request) {
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
 
   const key = `register|${clientIp(req)}`;
-  if (tooMany(key, 10)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
-  recordFailure(key); // counts every attempt, successful or not
+  if (await tooMany(key, 10)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+  await recordFailure(key); // counts every attempt, successful or not
 
   const taken = await prisma.user.findFirst({ where: { email: { equals: p.data.email, mode: "insensitive" } }, select: { id: true } });
   if (taken) return NextResponse.json({ error: "An account with this email already exists. Try signing in." }, { status: 409 });

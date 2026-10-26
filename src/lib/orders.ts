@@ -37,10 +37,10 @@ export async function settle(tx: Tx, providerOrderId: string, providerPaymentId:
   const number = pay.order.number, items = pay.order.items;
   const moved = await tx.payment.updateMany({ where: { id: pay.id, status: { in: ["CREATED", "AUTHORIZED"] } }, data: { status: "CAPTURED", providerPaymentId } });
   if (moved.count === 0) return { number, alreadySettled: true, needsRefund: false };
-  const ok = await tx.order.updateMany({ where: { id: pay.orderId, status: "PENDING" }, data: { status: "CONFIRMED" } });
+  const ok = await tx.order.updateMany({ where: { id: pay.orderId, status: "PENDING" }, data: { status: "CONFIRMED", confirmedAt: new Date() } });
   if (ok.count === 1) { await sell(tx, items); return { number, alreadySettled: false, needsRefund: false }; }
   if (pay.order.status === "CANCELLED" && (await tryReserve(tx, items))) {
-    const back = await tx.order.updateMany({ where: { id: pay.orderId, status: "CANCELLED" }, data: { status: "CONFIRMED" } });
+    const back = await tx.order.updateMany({ where: { id: pay.orderId, status: "CANCELLED" }, data: { status: "CONFIRMED", confirmedAt: new Date() } });
     if (back.count === 1) { await sell(tx, items); return { number, alreadySettled: false, needsRefund: false }; }
     await unreserve(tx, items);
   }

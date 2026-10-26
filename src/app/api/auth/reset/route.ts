@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   const bad = passwordProblem(p.data.password);
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
   const key = `reset|${clientIp(req)}`;
-  if (tooMany(key, 10)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
-  recordFailure(key);
+  if (await tooMany(key, 10)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+  await recordFailure(key);
   try {
     await prisma.$transaction(async (tx) => {
       const email = await consumeToken(tx, "reset", p.data.token);

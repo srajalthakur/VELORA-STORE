@@ -18,7 +18,11 @@ type Order = {
   next: string | null;
   canRefund: boolean;
   needsRefund: boolean;
+  carrier: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
 };
+type ShipDraft = { id: string; mode: "ship" | "edit"; carrier: string; trackingNumber: string; trackingUrl: string };
 
 type Filter = "ALL" | "NEEDS_REFUND" | "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";
 type Note = { kind: "ok" | "err"; text: string } | null;
@@ -72,6 +76,7 @@ export default function OrdersClient({ adminEmail }: { adminEmail: string }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [requested, setRequested] = useState<Set<string>>(new Set());
   const [note, setNote] = useState<Note>(null);
+  const [ship, setShip] = useState<ShipDraft | null>(null);
   const seq = useRef(0);
 
   const toLogin = useCallback(() => router.replace("/login?next=/admin/orders"), [router]);
@@ -111,7 +116,7 @@ export default function OrdersClient({ adminEmail }: { adminEmail: string }) {
     try {
       const r = await fetch(url, { ...init, headers: { "Content-Type": "application/json" } });
       if (r.status === 401) return { unauth: true as const };
-      const j = (await r.json().catch(() => ({}))) as { error?: string; status?: string };
+      const j = (await r.json().catch(() => ({}))) as { error?: string; status?: string; emailed?: boolean };
       return { ok: r.ok, j };
     } catch {
       return { ok: false, j: { error: "Network problem. Nothing was changed. Try again." } };
@@ -122,9 +127,30 @@ export default function OrdersClient({ adminEmail }: { adminEmail: string }) {
 
   async function advance(o: Order) {
     if (!o.next) return;
+    // Shipping needs the courier and tracking number, so ask for them first.
+    if (o.next === "SHIPPED") return setShip({ id: o.id, mode: "ship", carrier: "", trackingNumber: "", trackingUrl: "" });
     const res = await call(o, `/api/admin/orders/${o.id}`, { method: "PATCH", body: JSON.stringify({ status: o.next }) });
     if ("unauth" in res) return toLogin();
     setNote(res.ok ? { kind: "ok", text: `${o.number} is now ${o.next!.toLowerCase()}.` } : { kind: "err", text: res.j.error || "Could not update the order" });
+    load();
+  }
+
+  async function submitShip(o: Order) {
+    if (!ship) return;
+    const body = { carrier: ship.carrier, trackingNumber: ship.trackingNumber, trackingUrl: ship.trackingUrl };
+    const res = ship.mode === "ship"
+      ? await call(o, `/api/admin/orders/${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "SHIPPED", ...body }) })
+      : await call(o, `/api/admin/orders/${o.id}/tracking`, { method: "PATCH", body: JSON.stringify(body) });
+    if ("unauth" in res) return toLogin();
+    if (!res.ok) return setNote({ kind: "err", text: res.j.error || "Could not save the tracking details" });
+    setShip(null);
+    setNote(
+      ship.mode === "edit"
+        ? { kind: "ok", text: `Tracking for ${o.number} was updated. The customer was not emailed again.` }
+        : res.j.emailed === false
+          ? { kind: "err", text: `${o.number} is marked shipped, but the email to the customer failed. Let them know the tracking number yourself.` }
+          : { kind: "ok", text: `${o.number} is shipped and the customer has been emailed the tracking details.` },
+    );
     load();
   }
 
@@ -253,13 +279,37 @@ export default function OrdersClient({ adminEmail }: { adminEmail: string }) {
                 </div>
               </div>
 
+              {o.trackingNumber && (
+                <p className={s.small}>
+                  Shipped with {o.carrier} · {o.trackingNumber}
+                  {o.trackingUrl && <> · <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer">tracking link</a></>}
+                </p>
+              )}
+
               {o.needsRefund && <p className={s.alertText}>Cancelled after payment. This customer is owed a refund.</p>}
 
-              {(o.next || o.canRefund) && (
+              {ship?.id === o.id && (
+                <form className={s.shipForm} onSubmit={(e) => { e.preventDefault(); submitShip(o); }}>
+                  <input className={s.field} placeholder="Courier (for example Delhivery)" aria-label="Courier" maxLength={60} value={ship.carrier} onChange={(e) => setShip({ ...ship, carrier: e.target.value })} />
+                  <input className={s.field} placeholder="Tracking number" aria-label="Tracking number" maxLength={60} value={ship.trackingNumber} onChange={(e) => setShip({ ...ship, trackingNumber: e.target.value })} />
+                  <input className={s.field} placeholder="Tracking link, https:// (optional)" aria-label="Tracking link" maxLength={300} value={ship.trackingUrl} onChange={(e) => setShip({ ...ship, trackingUrl: e.target.value })} />
+                  <div className={s.actions}>
+                    <button type="submit" className={s.primary} disabled={busy}>{busy ? "Saving…" : ship.mode === "ship" ? "Mark shipped and email customer" : "Save tracking"}</button>
+                    <button type="button" className={s.ghost} onClick={() => setShip(null)} disabled={busy}>Cancel</button>
+                  </div>
+                </form>
+              )}
+
+              {(o.next || o.canRefund || o.status === "SHIPPED" || o.status === "DELIVERED") && ship?.id !== o.id && (
                 <div className={s.actions}>
                   {o.next && (
                     <button type="button" className={s.primary} disabled={busy} onClick={() => advance(o)}>
                       {busy ? "Working…" : ACTION_LABEL[o.next] ?? `Mark ${o.next.toLowerCase()}`}
+                    </button>
+                  )}
+                  {(o.status === "SHIPPED" || o.status === "DELIVERED") && (
+                    <button type="button" className={s.ghost} disabled={busy} onClick={() => setShip({ id: o.id, mode: "edit", carrier: o.carrier ?? "", trackingNumber: o.trackingNumber ?? "", trackingUrl: o.trackingUrl ?? "" })}>
+                      {o.trackingNumber ? "Edit tracking" : "Add tracking"}
                     </button>
                   )}
                   {o.canRefund && (

@@ -16,8 +16,8 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: INVALID }, { status: 400 });
   const key = `verify|${clientIp(req)}`;
-  if (tooMany(key, 20)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
-  recordFailure(key);
+  if (await tooMany(key, 20)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+  await recordFailure(key);
   const done = await prisma.$transaction(async (tx) => {
     const email = await consumeToken(tx, "verify", p.data.token);
     if (!email) return false;

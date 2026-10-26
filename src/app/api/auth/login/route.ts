@@ -17,11 +17,11 @@ export async function POST(req: Request) {
   if (!p.success) return NextResponse.json({ error: "Enter your email and password" }, { status: 400 });
   const ip = clientIp(req), key = `${ip}|${p.data.email}`, acctKey = `login-acct|${p.data.email}`, ipKey = `login-ip|${ip}`;
   // Three counters: this visitor on this account, anyone on this account, and this visitor on any account.
-  if (tooMany(key) || tooMany(acctKey, 15) || tooMany(ipKey, 40)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+  if (await tooMany(key) || await tooMany(acctKey, 15) || await tooMany(ipKey, 40)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   const user = await prisma.user.findFirst({ where: { email: { equals: p.data.email, mode: "insensitive" } } });
   const ok = verifyPassword(p.data.password, user?.passwordHash ?? DUMMY) && !!user?.passwordHash;
-  if (!ok || !user) { recordFailure(key); recordFailure(acctKey); recordFailure(ipKey); return NextResponse.json({ error: "Incorrect email or password" }, { status: 401 }); }
-  clearFailures(key); clearFailures(acctKey);
+  if (!ok || !user) { await recordFailure(key); await recordFailure(acctKey); await recordFailure(ipKey); return NextResponse.json({ error: "Incorrect email or password" }, { status: 401 }); }
+  await clearFailures(key); await clearFailures(acctKey);
   await startSession(user.id);
   return NextResponse.json({ ok: true, role: user.role });
 }

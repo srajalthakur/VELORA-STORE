@@ -16,5 +16,5 @@ export async function GET(req: Request) {
   if (sp.get("refund") === "1") { where.status = "CANCELLED"; where.payments = { some: { status: "CAPTURED" } }; }
   const rows = await prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, take: 100, include: { items: true, payments: true } });
   return NextResponse.json({ orders: rows.map((o) => ({ id: o.id, number: o.number, createdAt: o.createdAt, email: o.email, phone: o.phone, shipTo: o.shipTo, status: o.status, totalPaise: o.totalPaise,
-    items: o.items.map((i) => ({ name: i.name, qty: i.qty })), paymentStatus: o.payments[0]?.status ?? null, next: nextStatus(o.status), canRefund: canRefund(o), needsRefund: needsRefund(o) })) });
+    items: o.items.map((i) => ({ name: i.name, qty: i.qty })), paymentStatus: o.payments[0]?.status ?? null, carrier: o.carrier, trackingNumber: o.trackingNumber, trackingUrl: o.trackingUrl, next: nextStatus(o.status), canRefund: canRefund(o), needsRefund: needsRefund(o) })) });
 }

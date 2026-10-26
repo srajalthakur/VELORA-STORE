@@ -17,8 +17,8 @@ export async function POST(req: Request) {
   if (!u) return NextResponse.json({ error: "Please sign in" }, { status: 401 });
   if (u.emailVerified) return NextResponse.json({ ok: true, already: true });
   const key = `verify-send|${a.user.id}`;
-  if (tooMany(key, 5)) return NextResponse.json({ error: "Too many emails requested. Try again in 15 minutes." }, { status: 429 });
-  recordFailure(key);
+  if (await tooMany(key, 5)) return NextResponse.json({ error: "Too many emails requested. Try again in 15 minutes." }, { status: 429 });
+  await recordFailure(key);
   try {
     const token = await issueToken("verify", u.email);
     await sendMail(u.email, "Confirm your VELORA email address", `Confirm this email address for your VELORA account (the link expires in 24 hours):\n${appUrl()}/verify?token=${encodeURIComponent(token)}\n\nIf you did not create an account, ignore this email.`);
