@@ -1,0 +1,278 @@
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 28px 16px 72px;
+  min-height: 100svh;
+  background: #0b0a08;
+  color: #f4efe4;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 36px;
+}
+
+.brand {
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  color: #c9a24b;
+  text-decoration: none;
+}
+
+.title {
+  margin: 8px 0 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: 40px;
+  letter-spacing: -0.01em;
+}
+
+.who {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(244, 239, 228, 0.6);
+  word-break: break-all;
+}
+
+.h2 {
+  margin: 40px 0 16px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: 26px;
+}
+
+.empty {
+  margin: 0 0 16px;
+  color: rgba(244, 239, 228, 0.6);
+  font-size: 14px;
+}
+
+.empty a {
+  color: #c9a24b;
+}
+
+.orders,
+.addrs {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.order,
+.addr {
+  padding: 18px 20px;
+  border: 1px solid rgba(244, 239, 228, 0.16);
+  background: rgba(244, 239, 228, 0.03);
+}
+
+.orow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.num {
+  display: block;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+.date {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(244, 239, 228, 0.55);
+}
+
+.pill {
+  padding: 5px 12px;
+  border: 1px solid rgba(244, 239, 228, 0.3);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pill[data-status="CONFIRMED"],
+.pill[data-status="PROCESSING"] {
+  border-color: #c9a24b;
+  color: #c9a24b;
+}
+
+.pill[data-status="SHIPPED"] {
+  border-color: #8fb8e8;
+  color: #8fb8e8;
+}
+
+.pill[data-status="DELIVERED"],
+.pill[data-status="REFUNDED"] {
+  border-color: #78c896;
+  color: #78c896;
+}
+
+.pill[data-status="CANCELLED"] {
+  border-color: #e08a73;
+  color: #e08a73;
+}
+
+.items {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.total {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.aname {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.aline {
+  margin: 0 0 2px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(244, 239, 228, 0.8);
+}
+
+.badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid #c9a24b;
+  color: #c9a24b;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(244, 239, 228, 0.3);
+  background: none;
+  color: #f4efe4;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.save {
+  min-height: 46px;
+  padding: 0 22px;
+  border: 0;
+  background: #c9a24b;
+  color: #14110b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.save:disabled,
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ghost:focus-visible,
+.save:focus-visible,
+.in:focus-visible,
+.chk input:focus-visible {
+  outline: 2px solid #c9a24b;
+  outline-offset: 2px;
+}
+
+.aform {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.f {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(244, 239, 228, 0.6);
+}
+
+.in {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 239, 228, 0.22);
+  border-radius: 0;
+  background: rgba(244, 239, 228, 0.04);
+  color: #f4efe4;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.in:disabled {
+  opacity: 0.6;
+}
+
+.chk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.chk input {
+  width: 20px;
+  height: 20px;
+  accent-color: #c9a24b;
+}
+
+.err {
+  margin: 0 0 12px;
+  color: #ffb4a2;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (min-width: 720px) {
+  .page {
+    padding-top: 48px;
+  }
+
+  .aform {
+    grid-template-columns: 1fr 1fr;
+  }
+}
